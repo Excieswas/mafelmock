@@ -1,0 +1,24 @@
+<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MAFELMOCK — Akademi</title><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css"></head><body><div class="wrap">
+<nav><a class="logo" href="/">MAFELMOCK</a><a class="mut" href="/usg.html">USG Girişi</a></nav>
+<header class="hero"><div class="eyebrow">Akademi</div><h1>MAFELMOCK</h1>
+<p>Komitelerimizi keşfet, study guide'ları indir, delege matrisini incele.</p></header>
+<section><h2>Komiteler</h2><div class="grid" id="list"><p class="mut">Yükleniyor…</p></div></section></div>
+<div class="modal" id="m"><div class="sheet" id="sheet"></div></div>
+<script src="app.js"></script><script>
+let C=[];const L=document.getElementById('list'),m=document.getElementById('m');
+api('committees').then(d=>{C=d;L.innerHTML=d.length?d.map(c=>{const f=c.matrix.filter(x=>x.delegate).length;
+return `<div class="card" onclick="open_('${esc(c.id)}')"><div class="abbr">${esc(c.abbr)}</div><h3>${esc(c.name)}</h3>
+<div class="bar"><i style="width:${Math.min(100,f/c.seats*100)}%"></i></div><div class="mut">${f} / ${c.seats} koltuk dolu</div></div>`}).join(''):'<p class="mut">Henüz komite eklenmedi.</p>'}).catch(()=>L.innerHTML='<p class="mut">Yüklenemedi.</p>');
+function open_(id){const c=C.find(x=>x.id===id),s=document.getElementById('sheet');
+s.innerHTML=`<div class="row"><div><div class="abbr">${esc(c.abbr)}</div><h2>${esc(c.name)}</h2></div><button class="ghost" onclick="m.classList.remove('on')">Kapat</button></div>
+${c.usg?`<p class="mut">USG: ${esc(c.usg)} · ${c.seats} koltuk</p>`:''}
+${c.agenda?`<label>Gündem</label><p>${esc(c.agenda)}</p>`:''}${c.description?`<label>Hakkında</label><p style="white-space:pre-wrap">${esc(c.description)}</p>`:''}
+${c.details?`<label>Detaylar</label><p style="white-space:pre-wrap">${esc(c.details)}</p>`:''}
+${c.hasGuide?`<p><a class="btn" href="/api/guide/${esc(c.id)}" target="_blank">Study Guide (PDF)</a></p>`:''}
+<label>Delege Matrisi</label><div style="overflow-x:auto"><table><tr><th>#</th><th>Ülke / Rol</th><th>Delege</th><th>Okul</th></tr>
+${Array.from({length:c.seats},(_,i)=>{const r=c.matrix[i]||{};return `<tr><td>${i+1}</td><td>${esc(r.country)||'—'}</td><td>${esc(r.delegate)||'<span class=mut>Boş</span>'}</td><td>${esc(r.school)}</td></tr>`}).join('')}</table></div>`;
+m.classList.add('on')}
+m.onclick=e=>{if(e.target===m)m.classList.remove('on')};
+</script></body></html>
