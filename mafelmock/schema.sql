@@ -1,0 +1,1 @@
+-- Opsiyonel: tablolar ilk istekte otomatik oluşturulur, bu dosyayı çalıştırmana gerek yok.
