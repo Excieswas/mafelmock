@@ -1,0 +1,45 @@
+<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MAFELMOCK — Akademi</title><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Playfair+Display:wght@700&display=swap" rel="stylesheet"><link rel="stylesheet" href="style.css"></head><body>
+<div id="splash"><div class="curtain l"></div><div class="curtain r"></div><div class="sp-in"><div class="sp-logo" id="spl"></div><div class="sp-line"></div><div class="sp-sub">AKADEMİ</div></div></div>
+<div class="wrap"><nav><a class="logo" href="/">MAFELMOCK</a><a class="l" href="/usg.html">USG Girişi →</a></nav>
+<header class="hero"><div class="orb o1"></div><div class="orb o2"></div><div class="eyebrow">Akademi</div><h1>MAFELMOCK</h1>
+<p>Komitelerini keşfet, study guide'ları incele, delege matrisini canlı takip et.</p>
+<a class="btn" href="#komiteler">Komiteleri Keşfet ↓</a>
+<div class="stats"><div class="stat"><b id="s1">0</b><span class="mut">Komite</span></div><div class="stat"><b id="s2">0</b><span class="mut">Koltuk</span></div><div class="stat"><b id="s3">0</b><span class="mut">Dolu Koltuk</span></div></div></header>
+<section id="komiteler"><h2>Komiteler</h2><div class="bar2"><input id="q" placeholder="Komite ara…"><button class="chip on" data-f="all">Tümü</button><button class="chip" data-f="free">Boş koltuk var</button><button class="chip" data-f="guide">Study guide var</button></div>
+<div class="grid" id="list"><p class="empty">Yükleniyor…</p></div></section></div>
+<div class="modal" id="m"><div class="sheet" id="sheet"></div></div><script>const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+async function api(path,opt={}){const h={...(opt.headers||{})};const t=sessionStorage.getItem('tok');if(t)h.authorization='Bearer '+t;
+if(opt.json){h['content-type']='application/json';opt.body=JSON.stringify(opt.json)}
+const r=await fetch('/api/'+path,{...opt,headers:h});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'Hata');return d}
+function toast(t,err){let c=document.getElementById('toasts');if(!c){c=document.createElement('div');c.id='toasts';document.body.appendChild(c)}
+const e=document.createElement('div');e.className='toast'+(err?' err':'');e.textContent=t;c.appendChild(e);setTimeout(()=>{e.style.transition='.4s';e.style.opacity=0;setTimeout(()=>e.remove(),400)},3000)}
+const $=id=>document.getElementById(id);
+function count(el,to){let s=null;const d=1200;const f=t=>{s??=t;const p=Math.min((t-s)/d,1);el.textContent=Math.round(to*(1-Math.pow(1-p,3)));if(p<1)requestAnimationFrame(f)};requestAnimationFrame(f)}
+
+let C=[],F='all';const L=$('list'),m=$('m'),fill=c=>c.matrix.filter(x=>x.delegate).length;
+const spl=$('spl');'MAFELMOCK'.split('').forEach((ch,i)=>{const s=document.createElement('span');s.textContent=ch;s.style.animationDelay=i*70+'ms';spl.appendChild(s)});
+function ready(){document.body.classList.add('ready')}
+if(sessionStorage.getItem('seen')){$('splash').remove();ready()}else{setTimeout(()=>$('splash').classList.add('open'),2300);setTimeout(()=>{$('splash').remove();ready();sessionStorage.setItem('seen',1)},3300)}
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');const b=e.target.querySelector('.bar i');if(b)b.style.width=b.dataset.w;io.unobserve(e.target)}}),{threshold:.15});
+function draw(){const q=$('q').value.toLowerCase();
+const d=C.filter(c=>(c.name+c.abbr).toLowerCase().includes(q)&&(F==='all'||(F==='free'&&fill(c)<c.seats)||(F==='guide'&&c.hasGuide)));
+L.innerHTML=d.length?d.map((c,i)=>{const f=fill(c);return `<div class="card reveal" style="--i:${i%6}" data-id="${esc(c.id)}"><span class="go">→</span><div class="abbr">${esc(c.abbr)||'KOMİTE'}</div><h3>${esc(c.name)}</h3>
+${c.usg?`<div class="mut">USG · ${esc(c.usg)}</div>`:''}<div class="dots">${Array.from({length:Math.min(c.seats,36)},(_,k)=>`<i class="${k<Math.round(f/c.seats*Math.min(c.seats,36))?'f':''}"></i>`).join('')}</div>
+<div class="bar"><i data-w="${Math.min(100,f/c.seats*100)}%"></i></div><div class="mut" style="margin-top:6px">${f} / ${c.seats} koltuk dolu ${c.hasGuide?'· 📄 Study guide':''}</div></div>`}).join(''):'<p class="empty">Eşleşen komite bulunamadı.</p>';
+L.querySelectorAll('.reveal').forEach(e=>{io.observe(e);e.onclick=()=>open_(e.dataset.id);
+e.onmousemove=ev=>{const r=e.getBoundingClientRect(),x=(ev.clientX-r.left)/r.width,y=(ev.clientY-r.top)/r.height;e.style.setProperty('--mx',x*100+'%');e.style.setProperty('--my',y*100+'%');e.style.transform=`perspective(700px) rotateY(${(x-.5)*7}deg) rotateX(${(.5-y)*7}deg) translateY(-4px)`};
+e.onmouseleave=()=>e.style.transform=''})}
+api('committees').then(d=>{C=d;count($('s1'),d.length);count($('s2'),d.reduce((a,c)=>a+c.seats,0));count($('s3'),d.reduce((a,c)=>a+fill(c),0));draw()}).catch(()=>L.innerHTML='<p class="empty">Yüklenemedi.</p>');
+$('q').oninput=draw;document.querySelectorAll('.chip').forEach(b=>b.onclick=()=>{document.querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));b.classList.add('on');F=b.dataset.f;draw()});
+function open_(id){const c=C.find(x=>x.id===id);
+$('sheet').innerHTML=`<div class="row"><div><div class="abbr">${esc(c.abbr)}</div><h2>${esc(c.name)}</h2>${c.usg?`<div class="mut">USG · ${esc(c.usg)}</div>`:''}</div><button class="ghost" onclick="m.classList.remove('on')">Kapat ✕</button></div>
+<div class="tabs"><button class="tab on" data-t="a">Genel</button><button class="tab" data-t="b">Delege Matrisi</button><button class="tab" data-t="c">Study Guide</button></div>
+<div class="pane on" id="pa">${c.agenda?`<label>Gündem</label><p>${esc(c.agenda)}</p>`:''}${c.description?`<label>Hakkında</label><p style="white-space:pre-wrap">${esc(c.description)}</p>`:''}${c.details?`<label>Detaylar</label><p style="white-space:pre-wrap">${esc(c.details)}</p>`:''}
+<label>Koltuk Haritası · ${fill(c)}/${c.seats} dolu</label><div class="seatmap">${Array.from({length:c.seats},(_,i)=>`<i class="${c.matrix[i]?.delegate?'f':''}" title="${esc(c.matrix[i]?.country||'Boş')}">${i+1}</i>`).join('')}</div></div>
+<div class="pane" id="pb"><input id="mq" placeholder="Ülke, delege veya okul ara…"><div style="overflow-x:auto"><table><thead><tr><th>#</th><th>Ülke / Rol</th><th>Delege</th><th>Okul</th></tr></thead><tbody id="mb"></tbody></table></div></div>
+<div class="pane" id="pc">${c.hasGuide?`<p>Bu komitenin study guide'ı hazır.</p><a class="btn" href="/api/guide/${esc(c.id)}" target="_blank">📄 Study Guide'ı Aç</a>`:'<p class="mut">Study guide henüz yüklenmedi.</p>'}</div>`;
+const rows=()=>{const q=$('mq').value.toLowerCase();$('mb').innerHTML=Array.from({length:c.seats},(_,i)=>{const r=c.matrix[i]||{};return[i+1,r]}).filter(([i,r])=>!q||(r.country+r.delegate+r.school).toLowerCase().includes(q)).map(([i,r])=>`<tr><td>${i}</td><td>${esc(r.country)||'—'}</td><td>${esc(r.delegate)||'<span class=mut>Boş</span>'}</td><td>${esc(r.school)}</td></tr>`).join('')};rows();$('mq').oninput=rows;
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{document.querySelectorAll('.tab,.pane').forEach(x=>x.classList.remove('on'));t.classList.add('on');$('p'+t.dataset.t).classList.add('on')});
+m.classList.add('on')}
+m.onclick=e=>{if(e.target===m)m.classList.remove('on')};addEventListener('keydown',e=>{if(e.key==='Escape')m.classList.remove('on')});
+</script></body></html>

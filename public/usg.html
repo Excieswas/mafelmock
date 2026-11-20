@@ -1,0 +1,36 @@
+<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MAFELMOCK — USG Paneli</title><meta name="robots" content="noindex"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Playfair+Display:wght@700&display=swap" rel="stylesheet"><link rel="stylesheet" href="style.css"></head><body>
+<div class="wrap"><nav><a class="logo" href="/">MAFELMOCK</a><span class="mut">USG Paneli</span></nav>
+<div id="login" class="panel login"><h2>USG Girişi</h2><label>Komite kodu</label><input id="id"><label>Şifre</label><input type="password" id="pw" onkeydown="if(event.key==='Enter')login()"><p class="msg" id="lm"></p><button onclick="login()">Giriş yap</button></div>
+<div id="app" hidden>
+<div class="row" style="margin-bottom:14px"><div><div class="abbr" id="ab"></div><h2 id="t"></h2></div><div class="ring" id="ring" style="flex:0"><b id="rt">0%</b></div></div>
+<div class="steps" id="steps"><div class="step on" data-s="1"><b>1</b>Genel Bilgi</div><div class="step" data-s="2"><b>2</b>Delege Matrisi</div><div class="step" data-s="3"><b>3</b>Study Guide</div></div>
+<div class="panel fade" id="s1"><label>Gündem</label><input id="agenda" oninput="dirty()"><label>Komite hakkında</label><textarea id="desc" oninput="dirty()"></textarea><label>Detaylar (kurallar, dress code, program…)</label><textarea id="det" oninput="dirty()"></textarea>
+<label>Koltuk (delege) sayısı</label><input id="seats" type="number" min="1" max="300" onchange="rows();dirty()"></div>
+<div class="panel fade" id="s2" hidden><div style="overflow-x:auto"><table class="tbl-in"><thead><tr><th>#</th><th>Ülke / Rol</th><th>Delege</th><th>Okul</th></tr></thead><tbody id="rows"></tbody></table></div></div>
+<div class="panel fade" id="s3" hidden><h3>Study Guide</h3><p class="mut">PDF, en fazla 8MB. Durum: <span id="gs" class="pill"></span></p><div class="row"><input type="file" id="f" accept="application/pdf"><button onclick="up()">⬆ Yükle</button></div></div>
+<div class="savebar"><span class="dirty" id="dt">Tüm değişiklikler kaydedildi</span><div class="row" style="flex:0"><button class="ghost" onclick="nav(-1)">←</button><button class="ghost" onclick="nav(1)">→</button><button onclick="save()">💾 Kaydet</button></div></div></div></div><script>const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+async function api(path,opt={}){const h={...(opt.headers||{})};const t=sessionStorage.getItem('tok');if(t)h.authorization='Bearer '+t;
+if(opt.json){h['content-type']='application/json';opt.body=JSON.stringify(opt.json)}
+const r=await fetch('/api/'+path,{...opt,headers:h});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'Hata');return d}
+function toast(t,err){let c=document.getElementById('toasts');if(!c){c=document.createElement('div');c.id='toasts';document.body.appendChild(c)}
+const e=document.createElement('div');e.className='toast'+(err?' err':'');e.textContent=t;c.appendChild(e);setTimeout(()=>{e.style.transition='.4s';e.style.opacity=0;setTimeout(()=>e.remove(),400)},3000)}
+const $=id=>document.getElementById(id);
+function count(el,to){let s=null;const d=1200;const f=t=>{s??=t;const p=Math.min((t-s)/d,1);el.textContent=Math.round(to*(1-Math.pow(1-p,3)));if(p<1)requestAnimationFrame(f)};requestAnimationFrame(f)}
+
+let M=[],cur=1,dr=false;
+async function login(){try{const r=await api('login',{method:'POST',json:{role:'usg',id:$('id').value.trim(),password:$('pw').value}});sessionStorage.setItem('tok',r.token);start()}catch(e){$('lm').textContent=e.message}}
+async function start(){try{const c=await api('usg/committee');$('login').hidden=true;$('app').hidden=false;
+$('t').textContent=c.name;$('ab').textContent=c.abbr;$('seats').value=c.seats;$('agenda').value=c.agenda;$('desc').value=c.description;$('det').value=c.details;
+$('gs').textContent=c.hasGuide?'Yüklü ✓':'Yok';M=c.matrix;rows()}catch{sessionStorage.removeItem('tok')}}
+function grab(){M=[...document.querySelectorAll('#rows tr')].map(tr=>{const i=tr.querySelectorAll('input');return{country:i[0].value,delegate:i[1].value,school:i[2].value}})}
+function prog(){const n=+$('seats').value||1,f=[...document.querySelectorAll('#rows tr')].filter(tr=>tr.querySelectorAll('input')[1].value.trim()).length,p=Math.round(f/n*100);
+$('ring').style.setProperty('--p',p);$('rt').textContent=f+'/'+n;document.querySelectorAll('#rows tr').forEach(tr=>tr.classList.toggle('f',!!tr.querySelectorAll('input')[1].value.trim()))}
+function rows(){if($('rows').children.length)grab();const n=Math.min(Math.max(+$('seats').value||1,1),300);
+$('rows').innerHTML=Array.from({length:n},(_,i)=>{const r=M[i]||{};return `<tr><td>${i+1}</td><td><input value="${esc(r.country)}" oninput="dirty()"></td><td><input value="${esc(r.delegate)}" oninput="dirty()"></td><td><input value="${esc(r.school)}" oninput="dirty()"></td></tr>`}).join('');prog()}
+function dirty(){dr=true;$('dt').textContent='● Kaydedilmemiş değişiklikler var';prog()}
+function show(n){cur=n;[1,2,3].forEach(i=>$('s'+i).hidden=i!==n);document.querySelectorAll('.step').forEach((e,i)=>{e.classList.toggle('on',i+1===n);e.classList.toggle('done',i+1<n)})}
+function nav(d){show(Math.min(3,Math.max(1,cur+d)))}document.querySelectorAll('.step').forEach(e=>e.onclick=()=>show(+e.dataset.s));
+async function save(){grab();try{await api('usg/committee',{method:'PUT',json:{seats:$('seats').value,agenda:$('agenda').value,description:$('desc').value,details:$('det').value,matrix:M}});dr=false;$('dt').textContent='Tüm değişiklikler kaydedildi';toast('Kaydedildi ✓')}catch(e){toast(e.message,1)}}
+async function up(){const f=$('f').files[0];if(!f)return toast('PDF seç',1);const fd=new FormData();fd.append('file',f);try{await api('usg/guide',{method:'POST',body:fd});$('gs').textContent='Yüklü ✓';toast('Study guide yüklendi ✓')}catch(e){toast(e.message,1)}}
+addEventListener('beforeunload',e=>{if(dr)e.preventDefault()});
+if(sessionStorage.getItem('tok'))start();</script></body></html>

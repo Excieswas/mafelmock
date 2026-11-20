@@ -1,0 +1,41 @@
+<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MAFELMOCK — Admin</title><meta name="robots" content="noindex"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Playfair+Display:wght@700&display=swap" rel="stylesheet"><link rel="stylesheet" href="style.css"></head><body>
+<div class="wrap"><nav><a class="logo" href="/">MAFELMOCK</a><span class="mut">Admin Paneli</span></nav>
+<div id="login" class="panel login"><h2 id="lt">Giriş</h2><label>Şifre</label><input type="password" id="pw" onkeydown="if(event.key==='Enter')login()"><p class="msg" id="lm"></p><button onclick="login()">Giriş yap</button></div>
+<div id="app" hidden>
+<div class="panel fade"><h3>Yeni Komite</h3>
+<div class="steps" id="steps"><div class="step on"><b>1</b>Komite</div><div class="step"><b>2</b>USG</div><div class="step"><b>3</b>Onay</div></div>
+<div id="st1" class="fade"><label>Komite adı</label><input id="n" placeholder="Güvenlik Konseyi"><div class="row"><div><label>Kısaltma</label><input id="a" placeholder="UNSC"></div><div><label>Koltuk sayısı</label><input id="s" type="number" value="20" min="1" max="300"></div></div></div>
+<div id="st2" hidden><label>USG adı</label><input id="u" placeholder="Ad Soyad"><label>USG paneli şifresi</label><div class="row"><input id="p" placeholder="Şifre"><button class="ghost" onclick="rnd()">🎲 Rastgele</button></div></div>
+<div id="st3" hidden></div>
+<p class="msg" id="am"></p><div class="row" style="margin-top:10px;justify-content:space-between"><button class="ghost" id="back" onclick="go(-1)" style="visibility:hidden">← Geri</button><button id="next" onclick="go(1)">İleri →</button></div></div>
+<div class="row" style="margin:24px 0 12px"><h2 style="flex:0;white-space:nowrap">Komiteler</h2><input id="q" placeholder="Ara…"></div><div id="list"></div></div></div><script>const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+async function api(path,opt={}){const h={...(opt.headers||{})};const t=sessionStorage.getItem('tok');if(t)h.authorization='Bearer '+t;
+if(opt.json){h['content-type']='application/json';opt.body=JSON.stringify(opt.json)}
+const r=await fetch('/api/'+path,{...opt,headers:h});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'Hata');return d}
+function toast(t,err){let c=document.getElementById('toasts');if(!c){c=document.createElement('div');c.id='toasts';document.body.appendChild(c)}
+const e=document.createElement('div');e.className='toast'+(err?' err':'');e.textContent=t;c.appendChild(e);setTimeout(()=>{e.style.transition='.4s';e.style.opacity=0;setTimeout(()=>e.remove(),400)},3000)}
+const $=id=>document.getElementById(id);
+function count(el,to){let s=null;const d=1200;const f=t=>{s??=t;const p=Math.min((t-s)/d,1);el.textContent=Math.round(to*(1-Math.pow(1-p,3)));if(p<1)requestAnimationFrame(f)};requestAnimationFrame(f)}
+
+let D=[],step=1;
+async function login(){try{const r=await api('login',{method:'POST',json:{role:'admin',password:$('pw').value}});sessionStorage.setItem('tok',r.token);start()}catch(e){$('lm').textContent=e.message}}
+async function start(){try{D=await api('admin/committees');$('login').hidden=true;$('app').hidden=false;draw()}catch{sessionStorage.removeItem('tok')}}
+function rnd(){$('p').value=Math.random().toString(36).slice(2,6)+'-'+Math.random().toString(36).slice(2,6)}
+function go(d){$('am').textContent='';
+if(d>0&&step===1&&!$('n').value.trim())return $('am').textContent='Komite adı gerekli';
+if(d>0&&step===2&&!$('p').value.trim())return $('am').textContent='USG şifresi gerekli';
+if(d>0&&step===3)return add();
+step+=d;[1,2,3].forEach(i=>{$('st'+i).hidden=i!==step;if(i===step)$('st'+i).classList.add('fade')});
+document.querySelectorAll('.step').forEach((e,i)=>{e.classList.toggle('on',i+1===step);e.classList.toggle('done',i+1<step)});
+$('back').style.visibility=step>1?'visible':'hidden';$('next').textContent=step===3?'✓ Komiteyi Oluştur':'İleri →';
+if(step===3)$('st3').innerHTML=`<label>Özet</label><p><b>${esc($('n').value)}</b> (${esc($('a').value)||'—'})<br>${esc($('s').value)} koltuk · USG: ${esc($('u').value)||'—'}<br>USG şifresi: <b class="gold">${esc($('p').value)}</b></p><p class="mut">Şifreyi USG ile paylaşmayı unutma.</p>`}
+async function add(){try{const r=await api('admin/committees',{method:'POST',json:{name:$('n').value,abbr:$('a').value,seats:$('s').value,usg:$('u').value,password:$('p').value}});
+const pw=$('p').value;toast('Komite oluşturuldu · kod: '+r.id);['n','a','u','p'].forEach(i=>$(i).value='');step=3;go(-2);start()}catch(e){$('am').textContent=e.message}}
+function draw(){const q=$('q').value.toLowerCase();$('list').innerHTML=D.filter(c=>c.name.toLowerCase().includes(q)).map(c=>`<div class="panel fade"><div class="row"><h3 style="flex:2">${esc(c.name)}</h3><span class="pill g">kod: ${esc(c.id)}</span><span class="pill">${c.matrix.filter(x=>x.delegate).length}/${c.seats} dolu</span><span class="pill">${c.hasGuide?'📄 Guide var':'Guide yok'}</span><span class="pill ${c.visible?'g':''}">${c.visible?'Yayında':'Gizli'}</span><button class="ghost" onclick="this.closest('.panel').querySelector('.ed').hidden^=1">Düzenle</button></div>
+<div class="ed" hidden><div class="row" style="margin-top:12px"><input id="n_${c.id}" value="${esc(c.name)}"><input id="a_${c.id}" value="${esc(c.abbr)}"><input id="s_${c.id}" type="number" value="${c.seats}"><input id="u_${c.id}" value="${esc(c.usg)}" placeholder="USG"></div>
+<div class="row" style="margin-top:10px"><input id="p_${c.id}" placeholder="Yeni şifre (boş = değişmez)"><label style="margin:0;display:flex;gap:8px;align-items:center;color:var(--tx)"><input type="checkbox" id="v_${c.id}" ${c.visible?'checked':''} style="width:auto"> Public görünür</label><button onclick="save('${c.id}')">Kaydet</button><button class="danger" onclick="del('${c.id}')">Sil</button></div></div></div>`).join('')||'<p class="mut">Komite yok.</p>'}
+async function save(id){const g=k=>$(k+'_'+id);try{await api('admin/committees/'+id,{method:'PUT',json:{name:g('n').value,abbr:g('a').value,seats:g('s').value,usg:g('u').value,password:g('p').value,visible:g('v').checked}});toast('Kaydedildi ✓');start()}catch(e){toast(e.message,1)}}
+async function del(id){if(confirm('Komite silinsin mi?')){await api('admin/committees/'+id,{method:'DELETE'});toast('Silindi');start()}}
+$('q').oninput=draw;
+api('status').then(s=>{if(!s.adminSet)$('lt').textContent='İlk kurulum: admin şifreni belirle'}).catch(e=>$('lm').textContent=e.message);
+if(sessionStorage.getItem('tok'))start();</script></body></html>
